@@ -1,0 +1,46 @@
+{
+  "name": "ygo-ruling",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "build:cards": "tsx scripts/build-card-index.ts",
+    "build:rules": "tsx scripts/pdf-to-rules.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/barrejordycira-spec/ygo-ruling.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/barrejordycira-spec/ygo-ruling/issues"
+  },
+  "homepage": "https://github.com/barrejordycira-spec/ygo-ruling#readme",
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.52",
+    "@ai-sdk/react": "^3.0.136",
+    "ai": "^6.0.134",
+    "next": "^16.2.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/node": "^25.5.0",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "pdf-parse": "^2.4.5",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
