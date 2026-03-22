@@ -189,6 +189,9 @@ function main() {
     keywords: [
       "rivalry", "gozen", "type", "attribute", "continuous trap",
       "summon restriction", "control", "send to graveyard",
+      "leaves the field", "extra deck", "return to deck", "shuffle",
+      "trigger effect", "location", "trap monster", "summon negation",
+      "master rule", "2021 update",
     ],
     content: cleanText(otherInfo),
   });
