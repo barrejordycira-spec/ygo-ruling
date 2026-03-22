@@ -4,6 +4,7 @@ import { join } from "path";
 export interface SlimCard {
   id: number;
   name: string;
+  name_en?: string;
   type: string;
   desc: string;
   race?: string;
@@ -28,10 +29,13 @@ function loadCards(): SlimCard[] {
   const raw = readFileSync(filePath, "utf-8");
   cardsCache = JSON.parse(raw) as SlimCard[];
 
-  // Build name index
+  // Build name index (both FR and EN names)
   nameIndex = new Map();
   for (const card of cardsCache) {
     nameIndex.set(card.name.toLowerCase(), card);
+    if (card.name_en) {
+      nameIndex.set(card.name_en.toLowerCase(), card);
+    }
   }
 
   return cardsCache;
@@ -49,7 +53,7 @@ export function searchCards(query: string, maxResults = 10): SlimCard[] {
   const results: SlimCard[] = [];
   const seen = new Set<number>();
 
-  // 1. Exact name match
+  // 1. Exact name match (FR or EN name found in query)
   for (const [name, card] of index) {
     if (queryLower.includes(name) && name.length > 2) {
       if (!seen.has(card.id)) {
@@ -59,7 +63,7 @@ export function searchCards(query: string, maxResults = 10): SlimCard[] {
     }
   }
 
-  // 2. Partial name match (card name appears in query or query word appears in card name)
+  // 2. Partial name match (query words appear in FR or EN card name)
   if (results.length < maxResults) {
     const queryWords = queryLower
       .split(/[\s,;.!?'"()]+/)
@@ -67,10 +71,10 @@ export function searchCards(query: string, maxResults = 10): SlimCard[] {
 
     for (const card of cards) {
       if (seen.has(card.id)) continue;
-      const cardNameLower = card.name.toLowerCase();
+      const names = card.name.toLowerCase() + " " + (card.name_en?.toLowerCase() ?? "");
 
       for (const word of queryWords) {
-        if (cardNameLower.includes(word) && word.length > 4) {
+        if (names.includes(word) && word.length > 4) {
           results.push(card);
           seen.add(card.id);
           break;

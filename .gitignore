@@ -25,3 +25,7 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
+.vercel
+
+# English card data (only needed for build script)
+data/card-en.json

@@ -1,9 +1,10 @@
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 
-interface RawCard {
+interface SlimCard {
   id: number;
   name: string;
+  name_en?: string;
   type: string;
   desc: string;
   race?: string;
@@ -18,20 +19,35 @@ interface RawCard {
   };
 }
 
-const INPUT = join(process.cwd(), "data", "card.json");
+const FR_INPUT = join(process.cwd(), "data", "card.json");
+const EN_INPUT = join(process.cwd(), "data", "card-en.json");
 const OUTPUT = join(process.cwd(), "data", "cards-slim.json");
 
-console.log("Reading card.json...");
-const raw = JSON.parse(readFileSync(INPUT, "utf-8"));
-const cards: unknown[] = raw.data ?? raw;
+console.log("Reading French card.json...");
+const frRaw = JSON.parse(readFileSync(FR_INPUT, "utf-8"));
+const frCards: any[] = frRaw.data ?? frRaw;
 
-const slim: RawCard[] = cards.map((c: any) => {
-  const entry: RawCard = {
+console.log("Reading English card-en.json...");
+let enMap: Map<number, string>;
+try {
+  const enRaw = JSON.parse(readFileSync(EN_INPUT, "utf-8"));
+  const enCards: any[] = enRaw.data ?? enRaw;
+  enMap = new Map(enCards.map((c) => [c.id, c.name]));
+  console.log(`English data: ${enMap.size} cards`);
+} catch {
+  console.log("No English data found, skipping name_en");
+  enMap = new Map();
+}
+
+const slim: SlimCard[] = frCards.map((c: any) => {
+  const entry: SlimCard = {
     id: c.id,
     name: c.name,
     type: c.humanReadableCardType ?? c.type,
     desc: c.desc,
   };
+  const enName = enMap.get(c.id);
+  if (enName && enName !== c.name) entry.name_en = enName;
   if (c.race) entry.race = c.race;
   if (c.atk !== undefined) entry.atk = c.atk;
   if (c.def !== undefined) entry.def = c.def;

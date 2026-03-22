@@ -25,7 +25,8 @@ const BASE_PROMPT = `Tu es un juge expert certifié de Yu-Gi-Oh! (niveau Head Ju
 7. **Cas limites** : Pour les interactions complexes où il n'existe pas de ruling officiel clair, indique-le et donne ton meilleur raisonnement en te basant sur les mécaniques générales.`;
 
 function formatCard(card: SlimCard): string {
-  const lines = [`### ${card.name}`];
+  const title = card.name_en ? `${card.name} (${card.name_en})` : card.name;
+  const lines = [`### ${title}`];
   const meta: string[] = [];
   if (card.type) meta.push(`Type: ${card.type}`);
   if (card.attribute) meta.push(`Attribut: ${card.attribute}`);
