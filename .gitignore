@@ -25,6 +25,3 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# generated data
-data/cards-slim.json
-data/rules.json
