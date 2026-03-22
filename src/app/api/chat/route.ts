@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const systemPrompt = buildSystemPrompt(relevantCards, relevantRules);
 
   const result = streamText({
-    model: google("gemini-2.5-flash-preview-05-20"),
+    model: google("gemini-2.5-flash"),
     system: systemPrompt,
     messages,
   });
