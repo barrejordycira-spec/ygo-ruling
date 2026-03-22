@@ -1,179 +1,202 @@
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import { PDFParse } from "pdf-parse";
 
-const INPUT = join(process.cwd(), "rules", "Rulebook_v9_fr.pdf");
+const RULES_DIR = join(process.cwd(), "rules");
 const OUTPUT = join(process.cwd(), "data", "rules.json");
 
-// Map page ranges to logical sections
-const PAGE_SECTIONS: { title: string; pages: number[]; keywords: string[] }[] = [
+interface RuleSection {
+  id: string;
+  title: string;
+  keywords: string[];
+  content: string;
+}
+
+// Sections defined by line ranges in rules_raw.txt (1-indexed)
+const LINE_SECTIONS: { title: string; start: number; end: number; keywords: string[] }[] = [
   {
-    title: "Généralités Sur Le Jeu",
-    pages: [4, 5],
-    keywords: ["généralités", "jeu", "duel", "deck", "cartes"],
+    title: "About the Game & Deck Building",
+    start: 29, end: 163,
+    keywords: ["game", "duel", "deck", "extra deck", "side deck", "main deck", "cards", "limit"],
   },
   {
-    title: "Éléments nécessaires et Tapis de Jeu",
-    pages: [6, 7, 8, 9],
-    keywords: ["deck", "extra deck", "side deck", "tapis", "zone", "monstre", "magie", "piège", "cimetière", "terrain", "pendule"],
+    title: "The Game Mat & Zones",
+    start: 152, end: 212,
+    keywords: ["zone", "monster zone", "spell trap zone", "graveyard", "field", "extra monster zone", "pendulum zone"],
   },
   {
-    title: "Cartes Monstre",
-    pages: [10, 11, 12, 13],
-    keywords: ["monstre", "atk", "def", "niveau", "attribut", "type", "normal", "effet"],
+    title: "Monster Cards & Effect Types",
+    start: 213, end: 354,
+    keywords: ["monster", "normal", "effect", "continuous effect", "ignition effect", "quick effect", "trigger effect", "flip effect", "atk", "def", "level", "attribute", "type"],
   },
   {
-    title: "Monstres à Effet",
-    pages: [13, 14, 15],
-    keywords: ["effet", "continu", "déclencheur", "flip", "ignition", "rapide", "monstre à effet"],
+    title: "Link Monsters",
+    start: 355, end: 430,
+    keywords: ["link", "link rating", "link arrow", "link material", "link summon", "extra monster zone"],
   },
   {
-    title: "Monstres Pendule",
-    pages: [16, 17],
-    keywords: ["pendule", "échelle", "zone pendule", "invocation pendule"],
+    title: "Pendulum Monsters",
+    start: 430, end: 498,
+    keywords: ["pendulum", "scale", "pendulum zone", "pendulum summon", "pendulum effect"],
   },
   {
-    title: "Monstres Xyz",
-    pages: [18, 19],
-    keywords: ["xyz", "rang", "matériel", "superposition", "détacher"],
+    title: "Xyz Monsters",
+    start: 499, end: 551,
+    keywords: ["xyz", "rank", "material", "overlay", "detach", "xyz summon"],
   },
   {
-    title: "Monstres Synchro",
-    pages: [20, 21],
-    keywords: ["synchro", "synthoniseur", "niveau", "invocation synchro"],
+    title: "Synchro Monsters",
+    start: 552, end: 598,
+    keywords: ["synchro", "tuner", "level", "synchro summon", "synchro material"],
   },
   {
-    title: "Monstres de Fusion",
-    pages: [22, 23],
-    keywords: ["fusion", "polymérisation", "matériel de fusion", "invocation fusion"],
+    title: "Fusion Monsters",
+    start: 599, end: 656,
+    keywords: ["fusion", "polymerization", "fusion material", "fusion summon"],
   },
   {
-    title: "Monstres Rituel",
-    pages: [23, 24],
-    keywords: ["rituel", "carte magie rituel", "invocation rituel"],
+    title: "Ritual Monsters",
+    start: 614, end: 661,
+    keywords: ["ritual", "ritual spell", "ritual summon", "tribute"],
   },
   {
-    title: "Monstres Lien",
-    pages: [24, 25],
-    keywords: ["lien", "link", "flèche", "marqueur de lien", "zone extra monstre"],
+    title: "Summoning Monster Cards",
+    start: 662, end: 729,
+    keywords: ["summon", "normal summon", "tribute summon", "set", "flip summon", "special summon"],
   },
   {
-    title: "Invocation de Cartes Monstre",
-    pages: [25, 26, 27],
-    keywords: ["invocation", "normale", "spéciale", "poser", "flip", "tribute", "sacrifice"],
+    title: "Spell Cards",
+    start: 730, end: 831,
+    keywords: ["spell", "normal spell", "continuous spell", "equip", "field spell", "quick-play", "ritual spell"],
   },
   {
-    title: "Cartes Magie",
-    pages: [28, 29, 30],
-    keywords: ["magie", "normale", "continue", "équipement", "terrain", "jeu rapide", "rituel"],
+    title: "Trap Cards",
+    start: 832, end: 890,
+    keywords: ["trap", "normal trap", "continuous trap", "counter trap", "set", "activate"],
   },
   {
-    title: "Cartes Piège",
-    pages: [30, 31, 32, 33],
-    keywords: ["piège", "normal", "continu", "contre-piège", "poser", "activer"],
+    title: "Preparing to Duel & Turn Structure",
+    start: 891, end: 942,
+    keywords: ["prepare", "duel", "lp", "life points", "turn", "phase", "coin", "first turn", "turn structure"],
   },
   {
-    title: "Préparation au Duel et Structure du Tour",
-    pages: [34, 35, 36],
-    keywords: ["préparation", "duel", "draw phase", "standby phase", "main phase", "battle phase", "end phase", "tour"],
-  },
-  {
-    title: "Draw Phase et Standby Phase",
-    pages: [36, 37],
-    keywords: ["draw", "pioche", "standby", "phase"],
+    title: "Draw Phase & Standby Phase",
+    start: 935, end: 980,
+    keywords: ["draw", "draw phase", "standby", "standby phase"],
   },
   {
     title: "Main Phase",
-    pages: [37, 38],
-    keywords: ["main phase", "invoquer", "poser", "magie", "piège", "changer position"],
+    start: 981, end: 1009,
+    keywords: ["main phase", "summon", "set", "spell", "trap", "change position"],
   },
   {
     title: "Battle Phase",
-    pages: [38, 39, 40, 41],
-    keywords: ["battle", "combat", "attaque", "start step", "battle step", "damage step", "end step", "replay"],
+    start: 1009, end: 1094,
+    keywords: ["battle", "attack", "start step", "battle step", "damage step", "end step", "replay", "direct attack"],
   },
   {
-    title: "End Phase",
-    pages: [41],
-    keywords: ["end phase", "fin", "tour", "limite main"],
+    title: "End Phase & Hand Limit",
+    start: 1094, end: 1113,
+    keywords: ["end phase", "hand limit", "end of turn", "discard"],
   },
   {
-    title: "Règles de combat des monstres",
-    pages: [42, 43, 44],
-    keywords: ["combat", "attaque", "défense", "dommages", "position", "atk", "def", "détruire"],
+    title: "Monster Battle Rules",
+    start: 1100, end: 1190,
+    keywords: ["battle", "attack", "defense", "damage", "position", "atk", "def", "destroy", "battle damage"],
   },
   {
-    title: "Règles de la Damage Step",
-    pages: [44, 45],
-    keywords: ["damage step", "dommages", "sous-étape", "début", "calcul", "après", "flip"],
+    title: "Damage Step Rules",
+    start: 1114, end: 1190,
+    keywords: ["damage step", "start", "flip", "damage calculation", "after damage", "substep"],
   },
   {
-    title: "Chaînes et Spell Speed",
-    pages: [46, 47, 48],
-    keywords: ["chaîne", "spell speed", "chain link", "résolution", "activation", "rapide", "contre-piège"],
+    title: "Chains and Spell Speed",
+    start: 1190, end: 1293,
+    keywords: ["chain", "spell speed", "chain link", "resolve", "activation", "quick effect", "counter trap"],
   },
   {
-    title: "Priorité du Joueur du Tour",
-    pages: [48, 49],
-    keywords: ["priorité", "joueur du tour", "fast effect", "effet rapide", "fenêtre", "réponse"],
+    title: "Other Rules",
+    start: 1293, end: 1420,
+    keywords: ["banish", "token", "forbidden", "limited", "semi-limited", "match", "side deck", "public knowledge"],
   },
   {
-    title: "Règles complémentaires",
-    pages: [50, 51, 52],
-    keywords: ["complémentaire", "bannie", "face verso", "interdit", "limité", "match", "side deck", "jeton"],
-  },
-  {
-    title: "Glossaire",
-    pages: [53, 54, 55, 56],
-    keywords: ["glossaire", "cibler", "coût", "activer", "invoquer", "envoyer", "détruire", "annuler", "contrôler"],
+    title: "Glossary",
+    start: 1420, end: 1579,
+    keywords: ["target", "cost", "activate", "summon", "send", "destroy", "negate", "control", "owner", "glossary"],
   },
 ];
 
-function cleanPageText(text: string): string {
+function cleanText(text: string): string {
   return text
     .split("\n")
-    .filter((line: string) => {
+    .filter((line) => {
       const t = line.trim();
       if (!t) return false;
-      // Remove standalone page numbers
-      if (/^[ivx\d]{1,4}$/i.test(t)) return false;
-      // Remove card IDs like YS14-FR024
-      if (/^[A-Z]{2,4}\d{2}-[A-Z]{2}\d{3}$/i.test(t)) return false;
+      if (/^[\divx]{1,4}$/i.test(t)) return false;
+      if (/^\d{1,3}\s+\d{1,3}$/.test(t)) return false;
       return true;
     })
     .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-async function main() {
-  console.log("Reading PDF...");
-  const buffer = readFileSync(INPUT);
-  const uint8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-  const parser = new PDFParse(uint8);
-  await parser.load();
-  const textData = await parser.getText();
+function main() {
+  console.log("Reading rules text files...");
 
-  const pages = (textData as any).pages as { text: string }[];
-  console.log(`Extracted ${pages.length} pages`);
+  const rulesLines = readFileSync(join(RULES_DIR, "rules_raw.txt"), "utf-8").split("\n");
+  const fastEffect = readFileSync(join(RULES_DIR, "fast-effect-timing.txt"), "utf-8");
+  const otherInfo = readFileSync(join(RULES_DIR, "other-info.txt"), "utf-8");
 
-  const sections = PAGE_SECTIONS.map((def, i) => {
-    const content = def.pages
-      .map((p: number) => (pages[p - 1] ? cleanPageText(pages[p - 1].text) : ""))
-      .filter((l: string) => Boolean(l))
-      .join("\n\n");
+  console.log(`rules_raw.txt: ${rulesLines.length} lines`);
+  console.log(`fast-effect-timing.txt: ${fastEffect.length} chars`);
+  console.log(`other-info.txt: ${otherInfo.length} chars`);
 
-    return {
-      id: `section-${i + 1}`,
-      title: def.title,
-      keywords: def.keywords,
-      content,
-    };
+  const sections: RuleSection[] = [];
+  let idx = 0;
+
+  for (const def of LINE_SECTIONS) {
+    // Lines are 1-indexed, array is 0-indexed
+    const raw = rulesLines.slice(def.start - 1, def.end).join("\n");
+    const content = cleanText(raw);
+
+    if (content.length > 20) {
+      sections.push({
+        id: `section-${++idx}`,
+        title: def.title,
+        keywords: def.keywords,
+        content,
+      });
+    } else {
+      console.warn(`  WARNING: Section too short "${def.title}" (${content.length} chars)`);
+    }
+  }
+
+  // Fast Effect Timing
+  sections.push({
+    id: "fast-effect-timing",
+    title: "Fast Effect Timing",
+    keywords: [
+      "fast effect", "timing", "chain", "spell speed", "quick effect",
+      "open game state", "turn player", "priority", "pass", "response",
+    ],
+    content: cleanText(fastEffect),
   });
 
-  let totalChars = 0;
+  // Card Rulings & FAQ
+  sections.push({
+    id: "card-rulings-faq",
+    title: "Card Rulings & FAQ",
+    keywords: [
+      "rivalry", "gozen", "type", "attribute", "continuous trap",
+      "summon restriction", "control", "send to graveyard",
+    ],
+    content: cleanText(otherInfo),
+  });
+
   const result = { sections };
   writeFileSync(OUTPUT, JSON.stringify(result, null, 2), "utf-8");
 
+  let totalChars = 0;
   console.log(`\nDone! ${sections.length} sections written to rules.json`);
   for (const s of sections) {
     console.log(`  - ${s.title} (${s.content.length} chars)`);
@@ -182,4 +205,4 @@ async function main() {
   console.log(`\nTotal: ${totalChars} chars`);
 }
 
-main().catch(console.error);
+main();
